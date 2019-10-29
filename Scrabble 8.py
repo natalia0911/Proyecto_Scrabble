@@ -12,6 +12,8 @@ from tkinter import messagebox
 import tkinter.scrolledtext as tkst
 import tkinter as tk
 import random
+#import sys
+#sys.setdefaultencoding('utf-8')
 
 
 #variables globales
@@ -23,22 +25,30 @@ global fichasJ2
 global turno 
 global tiempoPartida
 global tiempoTurno
+global proceso
+global proceso2
 global fichasSelecionadas
+global matrizBotones
+global cantFichasMin
 
 matriz=[]
 letras=[]
 archivo = []
 fichasJ1 = []
 fichasJ2 = []
+turno = True
 tiempoPartida = ''
 tiempoTurno = ''
-turno = True
 proceso=0
 proceso2=0
 fichasSelecionadas = []
+matrizBotones = []
+cantFichasMin = 0
 
 #Definición de Funciones
 
+
+    
 def ventanaInicial():
 
     '''
@@ -47,7 +57,7 @@ def ventanaInicial():
     Salidas: .
     '''
 
-   
+    frame2.grid_remove()
     frame1.grid(row=0,column=0, rowspan=30, columnspan=30, sticky=(E,W,N,S))
     lblImagen.place(x=170,y=420)
     lblnombreJuego.grid(row=5,column=10, rowspan=5, columnspan=9, sticky=(E,W,N,S))
@@ -56,7 +66,7 @@ def ventanaInicial():
     entJugador1.grid(row=13,column=13, rowspan=1, columnspan=6, sticky=(E,W,N,S))
     entJugador2.grid(row=15,column=13, rowspan=1, columnspan=6, sticky=(E,W,N,S))
     btnJugar.grid(row=18,column=13, rowspan=1, columnspan=6, sticky=(E,W,N,S))
-    frame2.grid_remove()
+    
 
 
 def onEnter(event):
@@ -76,7 +86,8 @@ def ventanaJuego():
     Entradas: Ninguna.
     Salidas: .
     '''
-
+    frame1.grid_remove()
+    
     eventoBotonJuego()
     crearMatriz()
 
@@ -110,7 +121,7 @@ def ventanaJuego():
     lblJugadorB.place(x=830,y=500)
     lblPuntajeB.place(x=1000,y=500)
     
-    frame1.grid_remove()
+
 
    
 def crearMatriz():
@@ -123,10 +134,12 @@ def crearMatriz():
 
     for i in range(0,15):
         matriz.append([])
+        matrizBotones.append([])
         for j in range(0,15):
             matriz[i].append(0)
+            matrizBotones[i].append(0)
 
-        
+            
     return cargarBD()
 
 
@@ -157,12 +170,10 @@ def cargarBD():
 
 
         while linea!="":
-
             archivo.append(linea.split(sep=","))
             linea=archivoVL.readline()
 
         archivoVL.close
-
 
         for i in archivo:
             i[2]=i[2].rstrip(";\n")
@@ -182,12 +193,33 @@ def crearListaLetras():
     '''
         
     global letras
+    global cantFichasMin
+    
     for i  in range(len(archivo)):
         mulLetra=archivo[i][0]*int(archivo[i][1])
         letras+=list(mulLetra)
 
-
+    cantFichasMin=round((len(letras)/100)*30)
+    
     return darFichas()
+
+
+def ganadorPPFichas(cantActual):
+    '''
+    Función: Dice quien es el ganador en el momento en que se gastaron el 70% de las fichas iniciales.
+    Entradas: Ninguna.
+    Salidas: Llama a la funcion darLetras().
+    '''
+
+    global cantFichasMin
+    nombres=eventoBotonJuego()
+    
+    if cantActual <= cantFichasMin:
+        ganadorPorTiempo()
+        
+    print("El 30% de las fichas es ",cantFichasMin)
+    print("Cantidad de fichas actual ",cantActual)
+
 
 def darFichas():
     '''
@@ -217,7 +249,9 @@ def darFichas():
         
     print("")
     print("Todas las fichas disponibles ahora(después de borrar las 7): ",letras)
-        
+
+    ganadorPPFichas(len(letras))
+    
     return darLetras()
 
 
@@ -256,16 +290,15 @@ def crearTablero():
     Entradas: Ninguna.
     Salidas: la funcion colocarFichasJugador()
     '''
-
+    
 
     for i in range(0,15):
 
         for j in range(len(matriz[i])):
-
-            casilla = Button(frameTablero,width=2,height=1,bg='#81BEF7',text="")
-            casilla.grid(row=i, column=j)
-            casilla.bind('<Button-1>',lambda e,i=i,j=j,casilla=casilla: colocarFichasJugador(i,j,casilla)) #Evento click derecho
-
+            
+            matrizBotones[i][j] = Button(frameTablero,width=2,height=1,bg='#81BEF7',text='')
+            matrizBotones[i][j].grid(row=i, column=j)
+            matrizBotones[i][j].bind('<Button-1>',lambda e,i=i,j=j,casilla=matrizBotones[i][j]: colocarFichasJugador(i,j,casilla))
 
     return crearCasillasBonus()
 
@@ -290,15 +323,13 @@ def crearCasillasBonus():
         matriz[filaL][columnaL] = 1
 
 
-
     for i in range(mulPalabra):  # se crea una cantidad de 2-6 mul de palabra
         filaP=random.randint(0,14)
         columnaP=random.randint(0,14)
         if matriz[filaP][columnaP]== 0:
 
             matriz[filaP][columnaP]= 2
-
-
+            
 
     for l in matriz:
         print(l)
@@ -317,7 +348,11 @@ def colocarFichaTablero(i,j,casilla,ficha,fichas):
     '''
 
     print(i,j)
-
+    
+    for k in range(len(matriz)):
+        for l in range(len(matriz)):
+            casilla.config(state='disabled')
+            
 
 
     if casilla["text"] == "":
@@ -416,9 +451,21 @@ def colocarFichasJugador(i,j,casilla):
     Salidas: Llama a la funcion crearCasillasBonus().
     '''
 
-    if casilla["text"] == "":
-        casilla.config(bg="#A70202")
+    #EQUIS CON ESTO
 
+    for k in range(0,15):
+        for n in range(0,15):
+            if casilla["text"]!= "":
+                casilla.config(bg="#fff1c7")
+                
+            if matrizBotones[i][j] == matrizBotones[k][n]:
+                matrizBotones[i][j].config(bg="#A70202")
+            else:
+                matrizBotones[k][n].config(state='disabled')
+                matrizBotones[k][n].config(bg='#81BEF7')
+                
+            
+            
     print(i,j)
 
     if turno == True:       #decide si colocar las fichas del jugador 1 o 2
@@ -474,6 +521,7 @@ def actualizarFichas():
     print(letras)
     print(fichas)
 
+    ganadorPPFichas(len(letras))
     return 
 
 def bitacora():
@@ -497,6 +545,7 @@ def iniciarTurno():
     global turno
     btnComenzar.config(state='disabled')
     btnTerminar.config(state='normal')
+    btnFinalizar.config(state='normal')
 
 
     nombres=eventoBotonJuego()
@@ -505,7 +554,7 @@ def iniciarTurno():
         jugador.set('Jugador: '+nombres[0])
         numTurno.set("Turno: "+ str(1))
         
-    return tiempoTurno(contador=15,contador1=0)
+    return tiempoTurno(contador=30,contador1=0)
 
 def tiempoTurno(contador=30,contador1=0):
 
@@ -517,11 +566,7 @@ def tiempoTurno(contador=30,contador1=0):
 
     global proceso2
 
-    
-    btnFinalizar.config(state='normal')
-    btnTerminar.config(state='normal')
-    
-
+        
     if contador == 0:
         lblTiempoTurno['text'] = "Tiempo de Turno: 0:0"
         messagebox.showinfo(" ", "Fin de su turno.")
@@ -537,9 +582,9 @@ def tiempoTurno(contador=30,contador1=0):
 def terminarTurno():
 
     '''
-    Función: Eventos que suceden cuando se presiona el boton de terminar turno(btnFinalizar).
+    Función: Termina el turno pero llama a cambiarTurno() y el tiempo se reinicia.
     Entradas: Ninguna.
-    Salidas: Ninguna.
+    Salidas: cambiarTurno().
     '''
     
     global proceso2
@@ -557,11 +602,11 @@ def terminarTurno():
 def pararTiempoTurno():
     
     '''
-    Función: Para el tiempo de turno.
+    Función: Para el tiempo de turno definitivamente.
     Entradas: Ninguna.
     Salidas: Ninguna.
     '''
-
+    global proceso2
 
     lblTiempoTurno.after_cancel(proceso2)
     btnIniciar.config(state='disabled')
@@ -580,9 +625,9 @@ def iniciarPartida():
     btnComenzar.config(state='normal')
     btnTerminar.config(state='disabled')
     
-    return tiempoPartida(contador=0,contador1=15)
+    return tiempoPartida(contador=0,contador1=1)
     
-def tiempoPartida(contador=0,contador1=15):
+def tiempoPartida(contador=0,contador1=1):
 
     '''
     Función: Crear un cronometro para el tiempo de cada partida.
@@ -596,12 +641,11 @@ def tiempoPartida(contador=0,contador1=15):
         contador=59
         contador1-=1
 
-    if contador1 == 0:
-        messagebox.showinfo(" ", "Fin de la partida.")
+    if contador1 == 0 and contador == 1:
+        lblTiempoPartida['text'] = "Tiempo de partida: "
+        messagebox.showinfo(" ", "Fin de la partida.")  
+        return ganadorPorTiempo()
 
-        return    #solo lo puse para parar el tiempo al minuto 10...
-
-        
 
     lblTiempoPartida['text'] = "Tiempo de partida: "+str(contador1)+':'+str(contador)
     proceso=lblTiempoPartida.after(1000, tiempoPartida,(contador-1),(contador1))   
@@ -632,28 +676,42 @@ def terminarPartida():
 
     btnIniciar.config(state='normal')
     btnFinalizar.config(state='disabled')
+    btnTerminar.config(state='disabled')
     lblTiempoPartida['text'] = "Tiempo de partida: "
+    jugador2.set("")
+    jugador1.set("")
     jugador.set('Jugador: ')
     numTurno.set("Turno: 0")
 
+    return ventana.destroy()
+     
 
-    return
+
 
 def pararTiempoPartida():
     '''
-    Función: Eventos que suceden cuando se presiona el boton de terminar la partida (btnTerminar).
+    Función: Para el tiempo de partida.
     Entradas: Ninguna.
     Salidas: Ninguna.
     '''
-    pararTiempoTurno()
+    
+
     lblTiempoPartida.after_cancel(proceso)
+    lblTiempoPartida['text'] = "Tiempo de partida: "
+    pararTiempoTurno()
     btnIniciar.config(state='normal')
     btnFinalizar.config(state='disabled')
-    lblTiempoPartida['text'] = "Tiempo de partida: "
     jugador.set('Jugador: ')
     numTurno.set("Turno: 0")
+    jugador2.set("")
+    jugador1.set("")
+    jugadorA.set('Jugador :')
+    jugadorB.set('Jugador :')
+    puntajeA.set('0')
+    puntajeB.set('0')
 
-    
+    return
+
 def eventoBotonJuego():
 
     '''
@@ -673,12 +731,10 @@ def eventoBotonJuego():
         j1+="_"
 
         j2+="_"
-
     
     for i in range(0,5):
 
         nombreA+=j1[i]
-
         nombreB+=j2[i]
 
  
@@ -687,7 +743,33 @@ def eventoBotonJuego():
 
     return [nombreA, nombreB]
 
+def ganadorPorTiempo():
 
+    '''
+    Función: Decir quién es el ganador cuando se termina tiempo de la partida.
+    Entradas: Ninguna.
+    Salidas: retorna la funcion pararTiempoPartida().
+    '''
+    
+    nombres=eventoBotonJuego()
+    puntosA = int(puntajeA.get())
+    puntosB = int(puntajeB.get())
+
+    if puntosA==puntosB:
+        messagebox.showinfo("Ganador", "Ocurrió un empate")
+    elif puntosA>puntosB:
+        messagebox.showinfo("Ganador", "El ganador de la partida es: "+nombres[0])
+    else:
+        messagebox.showinfo("Ganador", "El ganador de la partida es: "+nombres[1])
+
+
+    btnIniciar.config(state='normal')
+    btnFinalizar.config(state='disabled')
+    pararTiempoPartida()
+    pararTiempoTurno()
+
+    return ventana.destroy()
+    
 
 def cambiarTurno():
 
@@ -699,24 +781,17 @@ def cambiarTurno():
     global turno
     nombres=eventoBotonJuego()
     numeroTurno = numTurno.get()
-    puntosA = int(puntajeA.get())
-    puntosB = int(puntajeB.get())
     
     if turno == False:
         jugador.set('Jugador: '+nombres[0])
-        if (int(numeroTurno[7:])) == 3: #21 
-            print("FIN DE LA PARTIDA")
-            if puntosA>puntosB:
-                messagebox.showinfo("Ganador", "El ganador de la partida es: "+nombres[0])
-            else:
-                messagebox.showinfo("Ganador", "El ganador de la partida es: "+nombres[1])
-
-            return pararTiempoPartida()
+        if (int(numeroTurno[7:])) == 20: 
+       
+            return ganadorPorTiempo()
+     
+        else:   
+            numTurno.set("Turno: "+ str(int(numeroTurno[7:])+1))
+            turno = True
             
-            
-        numTurno.set("Turno: "+ str(int(numeroTurno[7:])+1))
-        turno = True
-        
     elif turno == True:
         jugador.set('Jugador: '+nombres[1])
         numTurno.set("Turno: "+ str(int(numeroTurno[7:])))
